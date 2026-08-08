@@ -1,5 +1,5 @@
 /**
- * MEU HYPE Worker v11.7
+ * MEU HYPE Worker v11.8
  * - /health
  * - /proxy?url=...  -> API oficial Mercado Livre (GET)
  * - /page?url=...   -> página pública Mercado Livre (GET, fallback de concorrentes)
@@ -53,7 +53,7 @@ export default {
     }
 
     if(u.pathname==="/health"){
-      return jsonResponse({ok:true,service:"MEU HYPE API bridge",version:"11.7",page_fallback:true});
+      return jsonResponse({ok:true,service:"MEU HYPE API bridge",version:"11.8",page_fallback:true,inspect:true});
     }
 
     if(request.method!=="GET"){
@@ -95,6 +95,48 @@ export default {
         });
       }catch(err){
         return jsonResponse({error:"upstream_fetch_failed",message:String(err?.message||err)},502);
+      }
+    }
+
+
+    if(u.pathname==="/inspect"){
+      const raw=u.searchParams.get("url");
+      if(!raw) return jsonResponse({error:"missing_url"},400);
+
+      let target;
+      try{ target=new URL(raw); }
+      catch{ return jsonResponse({error:"invalid_url"},400); }
+
+      if(target.protocol!=="https:" || !allowedPublicMlHost(target.hostname)){
+        return jsonResponse({error:"page_host_not_allowed"},403);
+      }
+
+      try{
+        const upstream=await fetch(target.toString(),{
+          method:"GET",
+          headers:{
+            "Accept":"text/html,application/xhtml+xml",
+            "Accept-Language":"pt-BR,pt;q=0.9,en;q=0.7",
+            "User-Agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36",
+            "Cache-Control":"no-cache"
+          },
+          redirect:"follow"
+        });
+        const text=await upstream.text();
+        return jsonResponse({
+          ok:upstream.ok,
+          status:upstream.status,
+          final_url:upstream.url||target.toString(),
+          content_type:upstream.headers.get("Content-Type")||"",
+          length:text.length,
+          has_sold_quantity:/sold_quantity|vendidos?/i.test(text),
+          has_price:/andes-money-amount|["']price["']\s*:/i.test(text),
+          has_date:/date_created|start_time|publicad[oa]\s+h/i.test(text),
+          has_product_markers:/ui-pdp-title|andes-money-amount|sold_quantity/i.test(text),
+          title_match:(text.match(/<title[^>]*>([\s\S]*?)<\/title>/i)||[])[1]?.replace(/<[^>]+>/g,"").trim()||null
+        });
+      }catch(err){
+        return jsonResponse({error:"inspect_failed",message:String(err?.message||err)},502);
       }
     }
 
