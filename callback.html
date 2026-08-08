@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MEU HYPE - Mercado Livre</title>
+</head>
+
+<body>
+  <h1>MEU HYPE</h1>
+  <h2>Conexão com Mercado Livre</h2>
+
+  <p id="mensagem">Recebendo autorização...</p>
+
+  <script>
+    const parametros = new URLSearchParams(window.location.search);
+
+    const code = parametros.get("code");
+    const state = parametros.get("state");
+    const error = parametros.get("error");
+
+    if (error) {
+      document.getElementById("mensagem").innerHTML =
+        "A autorização não foi concluída.<br><br>Erro: <b>" + error + "</b>";
+    } else if (code) {
+      document.getElementById("mensagem").innerHTML =
+        "Autorização recebida com sucesso!<br><br>" +
+        "Agora volte para o <b>MEU HYPE</b> para concluir a conexão.";
+    } else {
+      document.getElementById("mensagem").innerHTML =
+        "Página de conexão do MEU HYPE pronta.";
+    }
+  </script>
+</body>
+</html>
